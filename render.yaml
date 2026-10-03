@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: securenote
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: NEXT_PUBLIC_ENABLE_AI
+        value: "true"
+      - key: NODE_VERSION
+        value: "22"
