@@ -39,6 +39,8 @@ export async function GET() {
       titleEnc: n.title,
       wrap: n.selfWrap,
       role: "owner",
+      kind: n.kind === "file" ? "file" : "text",
+      file: n.file ?? null,
       updatedAt: (n.updatedAt as Date).toISOString(),
     });
   }
@@ -50,6 +52,8 @@ export async function GET() {
       titleEnc: n.title,
       wrap: g.wrap,
       role: "viewer",
+      kind: n.kind === "file" ? "file" : "text",
+      file: n.file ?? null,
       updatedAt: (n.updatedAt as Date).toISOString(),
       grant: {
         viewsLeft:
@@ -79,10 +83,24 @@ export async function POST(req: NextRequest) {
 
   const db = await getDb();
   const now = new Date();
+  const kind = body.kind === "file" ? "file" : "text";
+  const file =
+    kind === "file" &&
+    body.file?.nameEnc?.ct &&
+    body.file?.mimeEnc?.ct &&
+    Number.isFinite(Number(body.file.size))
+      ? {
+          nameEnc: body.file.nameEnc,
+          mimeEnc: body.file.mimeEnc,
+          size: Number(body.file.size),
+        }
+      : null;
   const r = await db.collection("notes").insertOne({
     ownerId: uid,
+    kind,
     title: body.titleEnc,
     body: body.bodyEnc,
+    file,
     selfWrap: body.selfWrap,
     createdAt: now,
     updatedAt: now,

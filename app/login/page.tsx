@@ -9,14 +9,20 @@ import { LockIcon } from "@/components/icons";
 export default function LoginPage() {
   const { login, status } = useAuth();
   const router = useRouter();
+  const [next, setNext] = useState("/notes");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (status === "ready") router.replace("/notes");
-  }, [status, router]);
+    const p = new URLSearchParams(window.location.search).get("next");
+    if (p && p.startsWith("/") && !p.startsWith("//")) setNext(p);
+  }, []);
+
+  useEffect(() => {
+    if (status === "ready") router.replace(next);
+  }, [status, router, next]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -24,7 +30,7 @@ export default function LoginPage() {
     setBusy(true);
     try {
       await login(email, password);
-      router.replace("/notes");
+      router.replace(next);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign in failed");
       setBusy(false);

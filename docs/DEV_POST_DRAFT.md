@@ -23,6 +23,12 @@ He didn't want "a notes app." He wanted three promises:
 
 And one wish he stated like a fact: *"and no screenshots."*
 
+His notes, by the way, aren't text — they're PDFs, scanned documents, photos
+of lecture boards. So SecureNote treats **files as first-class citizens**: you
+upload a PDF (up to 10 MB), and it's encrypted — filename, type and contents —
+in your browser before upload, then decrypted only inside the reader's browser,
+where it renders inline *under a watermark that carries the reader's name*.
+
 That last one became the most interesting part of the build, because it's the
 one promise **no website on earth can keep** — and this post is partly about
 what I built instead of a lie.

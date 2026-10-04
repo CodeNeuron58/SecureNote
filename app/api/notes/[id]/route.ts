@@ -39,6 +39,8 @@ export async function GET(req: NextRequest, ctx: Ctx) {
         bodyEnc: note.body,
         selfWrap: note.selfWrap,
         role: "owner",
+        kind: note.kind === "file" ? "file" : "text",
+        file: note.file ?? null,
         createdAt: (note.createdAt as Date).toISOString(),
         updatedAt: (note.updatedAt as Date).toISOString(),
       },
@@ -55,16 +57,25 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   if (grant.expiresAt && (grant.expiresAt as Date).getTime() < Date.now()) {
     return deny("expired", "expired", "This share link has expired");
   }
-  if (grant.maxViews != null && Number(grant.views || 0) >= Number(grant.maxViews)) {
-    return deny("limit", "limit", "This note's view limit has been reached");
-  }
 
+  // Atomic increment: the limit check and the counter move together, so
+  // concurrent opens can never exceed maxViews.
   const upd = await db.collection("grants").findOneAndUpdate(
-    { _id: grant._id },
+    {
+      _id: grant._id,
+      $or: [
+        { maxViews: null },
+        { maxViews: { $exists: false } },
+        { $expr: { $lt: ["$views", "$maxViews"] } },
+      ],
+    },
     { $inc: { views: 1 } },
     { returnDocument: "after" }
   );
   const g = (upd as { value?: Record<string, unknown> } | null)?.value ?? (upd as unknown as Record<string, unknown>);
+  if (!g) {
+    return deny("limit", "limit", "This note's view limit has been reached");
+  }
   const viewNumber = Number((g as { views?: number })?.views ?? 1);
 
   const ua = req.headers.get("user-agent") || "unknown";
@@ -88,6 +99,8 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       bodyEnc: note.body,
       wrap: grant.wrap,
       role: "viewer",
+      kind: note.kind === "file" ? "file" : "text",
+      file: note.file ?? null,
       createdAt: (note.createdAt as Date).toISOString(),
       updatedAt: (note.updatedAt as Date).toISOString(),
       viewNumber,

@@ -9,6 +9,7 @@ import { ShieldIcon } from "@/components/icons";
 export default function SignupPage() {
   const { signup, status } = useAuth();
   const router = useRouter();
+  const [next, setNext] = useState("/notes");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,8 +17,13 @@ export default function SignupPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (status === "ready") router.replace("/notes");
-  }, [status, router]);
+    const p = new URLSearchParams(window.location.search).get("next");
+    if (p && p.startsWith("/") && !p.startsWith("//")) setNext(p);
+  }, []);
+
+  useEffect(() => {
+    if (status === "ready") router.replace(next);
+  }, [status, router, next]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -29,7 +35,7 @@ export default function SignupPage() {
     setBusy(true);
     try {
       await signup(name, email, password);
-      router.replace("/notes");
+      router.replace(next);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign up failed");
       setBusy(false);

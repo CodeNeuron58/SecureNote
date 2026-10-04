@@ -64,13 +64,28 @@ class WorkerRpc {
   }
 }
 
+// One RPC at a time per worker: overlapping calls would overwrite the
+// worker's onmessage handler and strand the first caller's promise.
+const chains = new WeakMap<Worker, Promise<unknown>>();
+
+function enqueue<T>(w: Worker, task: () => Promise<T>): Promise<T> {
+  const prev = chains.get(w) ?? Promise.resolve();
+  const next = prev.then(task, task);
+  chains.set(w, next.catch(() => {}));
+  return next;
+}
+
 export function embedTexts(
   w: Worker,
   texts: string[],
   onProgress?: ProgressFn
 ): Promise<number[][]> {
-  const rpc = new WorkerRpc(w, onProgress);
-  return rpc.call<{ vectors: number[][] }>({ kind: "embed", texts }).then((r) => r.vectors);
+  return enqueue(w, () => {
+    const rpc = new WorkerRpc(w, onProgress);
+    return rpc.call<{ vectors: number[][] }>({ kind: "embed", texts }).then(
+      (r) => r.vectors
+    );
+  });
 }
 
 export function askLlm(
@@ -79,6 +94,8 @@ export function askLlm(
   onToken: (t: string) => void,
   onProgress?: ProgressFn
 ): Promise<string> {
-  const rpc = new WorkerRpc(w, onProgress, onToken);
-  return rpc.call<{ text: string }>({ kind: "ask", prompt }).then((r) => r.text);
+  return enqueue(w, () => {
+    const rpc = new WorkerRpc(w, onProgress, onToken);
+    return rpc.call<{ text: string }>({ kind: "ask", prompt }).then((r) => r.text);
+  });
 }

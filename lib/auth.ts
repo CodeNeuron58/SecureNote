@@ -1,9 +1,13 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
-const SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "dev-only-secret-change-me"
-);
+const rawSecret = process.env.JWT_SECRET || "dev-only-secret-change-me";
+if (process.env.NODE_ENV === "production" && rawSecret === "dev-only-secret-change-me") {
+  console.error(
+    "JWT_SECRET is not configured — sessions are signed with an insecure development fallback. Set JWT_SECRET before serving real traffic."
+  );
+}
+const SECRET = new TextEncoder().encode(rawSecret);
 
 export const SESSION_COOKIE = "sn_session";
 

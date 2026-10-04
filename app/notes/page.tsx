@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/components/AuthProvider";
 import {
   decryptString,
+  encryptBytes,
   encryptString,
   generateContentKey,
   unwrapKey,
@@ -19,6 +20,14 @@ import { PlusIcon, TrashIcon, CpuIcon, EyeIcon, LockIcon } from "@/components/ic
 
 type Deco = NoteListItem & { title: string };
 
+const MAX_PLAINTEXT_BYTES = 10 * 1024 * 1024; // 10 MB
+
+function fmtSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
 export default function NotesPage() {
   const { status, user, keys } = useAuth();
   const router = useRouter();
@@ -26,6 +35,7 @@ export default function NotesPage() {
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (status === "anon") router.replace("/login");
@@ -66,13 +76,68 @@ export default function NotesPage() {
       const selfWrap = await wrapKeyFor(contentKey, keys.pubJwk);
       const r = await api<{ id: string }>("/api/notes", {
         method: "POST",
-        body: JSON.stringify({ titleEnc, bodyEnc, selfWrap }),
+        body: JSON.stringify({ kind: "text", titleEnc, bodyEnc, selfWrap }),
       });
       router.push(`/notes/${r.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not create note");
       setCreating(false);
     }
+  }
+
+  async function uploadFile(file: File) {
+    if (!keys) return;
+    if (file.size > MAX_PLAINTEXT_BYTES) {
+      setError("File too large — the limit is 10 MB");
+      return;
+    }
+    setCreating(true);
+    setError("");
+    let noteId: string | null = null;
+    try {
+      const contentKey = await generateContentKey();
+      const titleEnc = await encryptString(contentKey, file.name);
+      const bodyEnc = await encryptString(contentKey, "");
+      const nameEnc = await encryptString(contentKey, file.name);
+      const mimeEnc = await encryptString(
+        contentKey,
+        file.type || "application/octet-stream"
+      );
+      const selfWrap = await wrapKeyFor(contentKey, keys.pubJwk);
+      const r = await api<{ id: string }>("/api/notes", {
+        method: "POST",
+        body: JSON.stringify({
+          kind: "file",
+          titleEnc,
+          bodyEnc,
+          selfWrap,
+          file: { nameEnc, mimeEnc, size: 0 },
+        }),
+      });
+      noteId = r.id;
+      const ct = await encryptBytes(contentKey, await file.arrayBuffer());
+      const up = await fetch(`/api/notes/${r.id}/file`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/octet-stream" },
+        body: ct,
+      });
+      if (!up.ok) {
+        const b = await up.json().catch(() => ({}));
+        throw new Error(b.error || "Upload failed");
+      }
+      router.push(`/notes/${r.id}`);
+    } catch (e) {
+      // don't leave a broken empty file note behind
+      if (noteId) await api(`/api/notes/${noteId}`, { method: "DELETE" }).catch(() => {});
+      setError(e instanceof Error ? e.message : "Upload failed");
+      setCreating(false);
+    }
+  }
+
+  function onPickFile(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (f) uploadFile(f);
   }
 
   async function del(id: string, title: string) {
@@ -136,6 +201,21 @@ export default function NotesPage() {
             </button>
           )}
           <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={creating}
+            className="flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:border-slate-500 disabled:opacity-50"
+          >
+            <LockIcon className="h-4 w-4" />
+            Upload file
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            onChange={onPickFile}
+            accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.csv,image/*"
+          />
+          <button
             onClick={newNote}
             disabled={creating}
             className="flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:opacity-50"
@@ -171,6 +251,15 @@ export default function NotesPage() {
                 ) : (
                   <span className="flex items-center gap-1 rounded-full bg-sky-500/10 px-2.5 py-1 font-medium text-sky-300">
                     <EyeIcon className="h-3 w-3" /> Shared with you
+                  </span>
+                )}
+                {n.kind === "file" ? (
+                  <span className="rounded-full bg-violet-500/10 px-2.5 py-1 font-medium text-violet-300">
+                    File{n.file ? ` · ${fmtSize(n.file.size)}` : ""}
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-slate-800 px-2.5 py-1 text-slate-300">
+                    Note
                   </span>
                 )}
                 {n.role === "viewer" && n.grant?.viewsLeft != null && (

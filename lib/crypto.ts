@@ -118,6 +118,35 @@ export async function decryptString(
   return td.decode(pt);
 }
 
+/* ---------- binary helpers (encrypted file uploads) ----------
+   Ciphertext format: [12-byte IV || AES-GCM ciphertext]. */
+
+export async function encryptBytes(
+  key: CryptoKey,
+  data: ArrayBuffer
+): Promise<ArrayBuffer> {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(
+    await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, data)
+  );
+  const out = new Uint8Array(12 + ct.length);
+  out.set(iv);
+  out.set(ct, 12);
+  return out.buffer;
+}
+
+export async function decryptBytes(
+  key: CryptoKey,
+  blob: ArrayBuffer
+): Promise<ArrayBuffer> {
+  const b = new Uint8Array(blob);
+  return crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: b.slice(0, 12) },
+    key,
+    b.slice(12)
+  );
+}
+
 async function encryptJson(key: CryptoKey, value: unknown): Promise<EncBlob> {
   return encryptString(key, JSON.stringify(value));
 }

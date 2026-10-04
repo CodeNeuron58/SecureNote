@@ -80,9 +80,18 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: "You already own this note" }, { status: 400 });
   }
 
-  await db.collection("grants").replaceOne(
-    { noteId: note._id, viewerId: viewer._id },
-    {
+  // Update path preserves the view counter and createdAt: re-sharing to change
+  // expiry/limits must never silently refresh a viewer's used-up quota.
+  const existing = await db
+    .collection("grants")
+    .findOne({ noteId: note._id, viewerId: viewer._id });
+  if (existing) {
+    await db.collection("grants").updateOne(
+      { _id: existing._id },
+      { $set: { wrap, maxViews, expiresAt, revoked: false, viewerEmail } }
+    );
+  } else {
+    await db.collection("grants").insertOne({
       noteId: note._id,
       ownerId: uid,
       viewerId: viewer._id,
@@ -93,9 +102,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       views: 0,
       revoked: false,
       createdAt: new Date(),
-    },
-    { upsert: true }
-  );
+    });
+  }
 
   return NextResponse.json({ ok: true });
 }
@@ -110,20 +118,21 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
   } catch {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
-  const viewerId = req.nextUrl.searchParams.get("viewerId") || "";
-  if (!ObjectId.isValid(viewerId)) {
-    return NextResponse.json({ error: "Invalid viewer" }, { status: 400 });
+  const grantId = req.nextUrl.searchParams.get("grantId") || "";
+  if (!ObjectId.isValid(grantId)) {
+    return NextResponse.json({ error: "Invalid share reference" }, { status: 400 });
   }
 
   const db = await getDb();
   const note = await ownedNote(db, id, uid);
   if (!note) return NextResponse.json({ error: "Note not found" }, { status: 404 });
 
-  await db
-    .collection("grants")
-    .updateOne(
-      { noteId: note._id, viewerId: new ObjectId(viewerId) },
-      { $set: { revoked: true } }
-    );
+  const r = await db.collection("grants").updateOne(
+    { _id: new ObjectId(grantId), noteId: note._id },
+    { $set: { revoked: true } }
+  );
+  if (r.matchedCount === 0) {
+    return NextResponse.json({ error: "Share not found" }, { status: 404 });
+  }
   return NextResponse.json({ ok: true });
 }

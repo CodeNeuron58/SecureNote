@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ChangeEvent,
   FormEvent,
   useCallback,
   useEffect,
@@ -13,13 +14,23 @@ import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/components/AuthProvider";
 import {
   decryptString,
+  decryptBytes,
   encryptString,
+  encryptBytes,
   unwrapKey,
   wrapKeyFor,
 } from "@/lib/crypto";
 import type { GrantItem, NoteFull, ViewEvent } from "@/lib/types";
 import { Watermark } from "@/components/Watermark";
-import { EyeIcon, CameraOffIcon, TrashIcon, XIcon } from "@/components/icons";
+import {
+  EyeIcon,
+  CameraOffIcon,
+  TrashIcon,
+  XIcon,
+  LockIcon,
+} from "@/components/icons";
+
+const MAX_PLAINTEXT_BYTES = 10 * 1024 * 1024; // 10 MB
 
 type Phase = "loading" | "ready" | "denied" | "error";
 type Tab = "content" | "sharing" | "audit";
@@ -58,6 +69,16 @@ export function NoteWorkspace({ id }: { id: string }) {
   const keyRef = useRef<CryptoKey | null>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [kind, setKind] = useState<"text" | "file">("text");
+  const [fileInfo, setFileInfo] = useState<{
+    name: string;
+    mime: string;
+    size: number;
+  } | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [fileBusy, setFileBusy] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const replaceInputRef = useRef<HTMLInputElement | null>(null);
   const [meta, setMeta] = useState<{
     updatedAt: string;
     viewsLeft: number | null;
@@ -66,6 +87,7 @@ export function NoteWorkspace({ id }: { id: string }) {
 
   const [tab, setTab] = useState<Tab>("content");
   const [grants, setGrants] = useState<GrantItem[]>([]);
+  const [grantsError, setGrantsError] = useState(false);
   const [views, setViews] = useState<ViewEvent[]>([]);
   const [shareEmail, setShareEmail] = useState("");
   const [shareExpiry, setShareExpiry] = useState("");
@@ -74,9 +96,15 @@ export function NoteWorkspace({ id }: { id: string }) {
 
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const savedSnapshot = useRef<{ title: string; body: string }>({
+    title: "",
+    body: "",
+  });
+  const [dirty, setDirty] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [toast, setToast] = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closePreviewRef = useRef<(() => void) | null>(null);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -98,8 +126,30 @@ export function NoteWorkspace({ id }: { id: string }) {
       if (!wrap) throw new Error("Missing key material");
       const ck = await unwrapKey(wrap, keys.privJwk);
       keyRef.current = ck;
-      setTitle(await decryptString(ck, r.note.titleEnc));
-      setBody(await decryptString(ck, r.note.bodyEnc));
+      const decTitle = await decryptString(ck, r.note.titleEnc);
+      const decBody = await decryptString(ck, r.note.bodyEnc);
+      setTitle(decTitle);
+      setBody(decBody);
+      savedSnapshot.current = { title: decTitle, body: decBody };
+      setDirty(false);
+      setKind(r.note.kind === "file" ? "file" : "text");
+      if (r.note.kind === "file" && r.note.file) {
+        let name = "(file)";
+        let mime = "";
+        try {
+          name = await decryptString(ck, r.note.file.nameEnc);
+        } catch {
+          // keep placeholder
+        }
+        try {
+          mime = await decryptString(ck, r.note.file.mimeEnc);
+        } catch {
+          // older note without mime
+        }
+        setFileInfo({ name, mime, size: r.note.file.size });
+      } else {
+        setFileInfo(null);
+      }
       setRole(r.note.role);
       setMeta({
         updatedAt: r.note.updatedAt,
@@ -121,6 +171,46 @@ export function NoteWorkspace({ id }: { id: string }) {
   useEffect(() => {
     if (status === "ready" && keys) load();
   }, [status, keys, load]);
+
+  /* ---- unsaved-change guard (text notes) ---- */
+  useEffect(() => {
+    if (kind !== "text") return;
+    setDirty(
+      title !== savedSnapshot.current.title || body !== savedSnapshot.current.body
+    );
+  }, [title, body, kind]);
+
+  useEffect(() => {
+    if (!dirty) return;
+    const h = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", h);
+    return () => window.removeEventListener("beforeunload", h);
+  }, [dirty]);
+
+  /* ---- viewer tabs revalidate their grant on focus, without metering ---- */
+  const revalidateViewer = useCallback(async () => {
+    try {
+      await api<{ ok: boolean }>(`/api/notes/${id}/access`);
+    } catch (e) {
+      if (e instanceof ApiError && e.reason) {
+        setTitle("");
+        setBody("");
+        closePreviewRef.current?.();
+        setDenyReason(e.reason);
+        setPhase("denied");
+      }
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (phase !== "ready" || role !== "viewer") return;
+    const onFocus = () => revalidateViewer();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [phase, role, revalidateViewer]);
 
   /* ---- anti-leak stack (viewer mode) ---- */
   useEffect(() => {
@@ -160,10 +250,10 @@ export function NoteWorkspace({ id }: { id: string }) {
     };
   }, [phase, role, id]);
 
-  /* ---- owner: save ---- */
+  /* ---- owner: save (text notes) ---- */
   async function save() {
     const ck = keyRef.current;
-    if (!ck || role !== "owner") return;
+    if (!ck || role !== "owner" || kind !== "text") return;
     setSaving(true);
     try {
       const titleEnc = await encryptString(ck, title);
@@ -173,6 +263,8 @@ export function NoteWorkspace({ id }: { id: string }) {
         body: JSON.stringify({ titleEnc, bodyEnc }),
       });
       setSavedAt(new Date());
+      savedSnapshot.current = { title, body };
+      setDirty(false);
       setMeta((m) => (m ? { ...m, updatedAt: new Date().toISOString() } : m));
       window.dispatchEvent(new CustomEvent("sn-ai-dirty"));
     } catch (e) {
@@ -184,11 +276,12 @@ export function NoteWorkspace({ id }: { id: string }) {
 
   /* ---- owner: sharing ---- */
   const loadGrants = useCallback(async () => {
+    setGrantsError(false);
     try {
       const r = await api<{ grants: GrantItem[] }>(`/api/notes/${id}/share`);
       setGrants(r.grants);
     } catch {
-      // non-fatal
+      setGrantsError(true);
     }
   }, [id]);
 
@@ -226,15 +319,94 @@ export function NoteWorkspace({ id }: { id: string }) {
     }
   }
 
-  async function revoke(viewerId: string) {
+  async function revoke(grantId: string) {
     try {
-      await api(`/api/notes/${id}/share?viewerId=${viewerId}`, { method: "DELETE" });
+      await api(`/api/notes/${id}/share?grantId=${grantId}`, { method: "DELETE" });
       await loadGrants();
       showToast("Access revoked — their key no longer opens this note");
     } catch (e) {
       showToast(e instanceof Error ? e.message : "Could not revoke");
     }
   }
+
+  /* ---- encrypted file operations ---- */
+  async function uploadCiphertext(f: File) {
+    const ck = keyRef.current;
+    if (!ck || role !== "owner") return;
+    if (f.size > MAX_PLAINTEXT_BYTES) {
+      showToast("File too large — the limit is 10 MB");
+      return;
+    }
+    setUploading(true);
+    try {
+      const ct = await encryptBytes(ck, await f.arrayBuffer());
+      const res = await fetch(`/api/notes/${id}/file`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/octet-stream" },
+        body: ct,
+      });
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({}));
+        throw new Error(b.error || "Upload failed");
+      }
+      setFileInfo((fi) => (fi ? { ...fi, size: ct.byteLength } : fi));
+      setMeta((m) => (m ? { ...m, updatedAt: new Date().toISOString() } : m));
+      showToast("File encrypted and stored");
+      window.dispatchEvent(new CustomEvent("sn-ai-dirty"));
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function onReplaceFile(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (f) uploadCiphertext(f);
+  }
+
+  async function openFile(download: boolean) {
+    const ck = keyRef.current;
+    if (!ck || !fileInfo) return;
+    setFileBusy(true);
+    try {
+      const res = await fetch(`/api/notes/${id}/file`);
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({}));
+        throw new Error(b.error || "Could not fetch file");
+      }
+      const pt = await decryptBytes(ck, await res.arrayBuffer());
+      const blob = new Blob([pt], {
+        type: fileInfo.mime || "application/octet-stream",
+      });
+      const url = URL.createObjectURL(blob);
+      if (download || !fileInfo.mime) {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileInfo.name;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      } else {
+        setPreviewUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return url;
+        });
+      }
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Could not open file");
+    } finally {
+      setFileBusy(false);
+    }
+  }
+
+  function closePreview() {
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+  }
+  closePreviewRef.current = closePreview;
 
   /* ---- owner: audit ---- */
   useEffect(() => {
@@ -255,6 +427,25 @@ export function NoteWorkspace({ id }: { id: string }) {
     }
   }
 
+  if (status === "anon") {
+    return (
+      <Main>
+        <Card title="Sign in to open this note">
+          <p className="text-sm text-slate-400">
+            This note is end-to-end encrypted and shared with a specific account —
+            sign in with the account it was shared to.
+          </p>
+          <Link
+            href={`/login?next=/notes/${id}`}
+            className="mt-5 inline-block rounded-xl bg-emerald-500 px-6 py-2.5 font-semibold text-slate-950 transition hover:bg-emerald-400"
+          >
+            Sign in
+          </Link>
+        </Card>
+      </Main>
+    );
+  }
+
   if (status === "locked") {
     return (
       <Main>
@@ -263,7 +454,7 @@ export function NoteWorkspace({ id }: { id: string }) {
             Sign in again to unlock the keys that open this note.
           </p>
           <Link
-            href="/login"
+            href={`/login?next=/notes/${id}`}
             className="mt-5 inline-block rounded-xl bg-emerald-500 px-6 py-2.5 font-semibold text-slate-950 transition hover:bg-emerald-400"
           >
             Unlock
@@ -344,6 +535,11 @@ export function NoteWorkspace({ id }: { id: string }) {
       <div className="mx-auto max-w-3xl">
         <Link
           href="/notes"
+          onClick={(e) => {
+            if (dirty && !confirm("You have unsaved changes — leave anyway?")) {
+              e.preventDefault();
+            }
+          }}
           className="mb-6 inline-block text-sm text-slate-500 transition hover:text-slate-300"
         >
           ← My notes
@@ -388,7 +584,7 @@ export function NoteWorkspace({ id }: { id: string }) {
           </div>
         )}
 
-        {role === "owner" && tab === "content" && (
+        {role === "owner" && tab === "content" && kind === "text" && (
           <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
             <input
               value={title}
@@ -405,9 +601,11 @@ export function NoteWorkspace({ id }: { id: string }) {
             />
             <div className="mt-4 flex items-center justify-between border-t border-slate-800 pt-4">
               <p className="text-xs text-slate-500">
-                {savedAt
-                  ? `Encrypted and saved at ${savedAt.toLocaleTimeString()}`
-                  : "Encrypted locally with AES-256-GCM before upload"}
+                {dirty
+                  ? "Unsaved changes — click Save to encrypt them"
+                  : savedAt
+                    ? `Encrypted and saved at ${savedAt.toLocaleTimeString()}`
+                    : "Encrypted locally with AES-256-GCM before upload"}
               </p>
               <button
                 onClick={save}
@@ -417,6 +615,66 @@ export function NoteWorkspace({ id }: { id: string }) {
                 {saving ? "Encrypting…" : "Save"}
               </button>
             </div>
+          </div>
+        )}
+
+        {kind === "file" && (role === "owner" || role === "viewer") && tab === "content" && (
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex min-w-0 items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400">
+                  <LockIcon className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-slate-100">
+                    {fileInfo?.name ?? "Encrypted file"}
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    {fileInfo
+                      ? `${fmtSize(fileInfo.size)} · AES-256-GCM · decrypted only in this browser`
+                      : ""}
+                  </p>
+                </div>
+              </div>
+              {role === "owner" && (
+                <input
+                  ref={replaceInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={onReplaceFile}
+                />
+              )}
+              {role === "owner" && (
+                <button
+                  onClick={() => replaceInputRef.current?.click()}
+                  disabled={uploading}
+                  className="shrink-0 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 transition hover:border-slate-500 disabled:opacity-50"
+                >
+                  {uploading ? "Encrypting…" : "Replace file"}
+                </button>
+              )}
+            </div>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <button
+                onClick={() => openFile(false)}
+                disabled={fileBusy}
+                className="rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:opacity-50"
+              >
+                {fileBusy ? "Decrypting…" : "Open file"}
+              </button>
+              <button
+                onClick={() => openFile(true)}
+                disabled={fileBusy}
+                className="rounded-xl border border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-200 transition hover:border-slate-500 disabled:opacity-50"
+              >
+                Download
+              </button>
+            </div>
+            <p className="mt-4 text-xs text-slate-500">
+              {role === "viewer"
+                ? "Decrypts in your browser — the server only ever handles sealed ciphertext. Opening it is recorded in the owner's audit log."
+                : "Uploaded as ciphertext; even the database cannot read it. Replacing it keeps all existing shares working."}
+            </p>
           </div>
         )}
 
@@ -476,8 +734,22 @@ export function NoteWorkspace({ id }: { id: string }) {
 
             <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
               <h3 className="mb-4 font-semibold">Who has access</h3>
-              {grants.length === 0 && (
-                <p className="text-sm text-slate-500">Not shared with anyone yet.</p>
+              {grantsError ? (
+                <div className="text-sm text-slate-400">
+                  Couldn&apos;t load the access list.{" "}
+                  <button
+                    onClick={loadGrants}
+                    className="text-emerald-400 hover:underline"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : (
+                grants.length === 0 && (
+                  <p className="text-sm text-slate-500">
+                    Not shared with anyone yet.
+                  </p>
+                )
               )}
               <ul className="space-y-3">
                 {grants.map((g) => (
@@ -548,6 +820,10 @@ export function NoteWorkspace({ id }: { id: string }) {
                             <span className="flex items-center gap-1.5 text-amber-300">
                               <CameraOffIcon className="h-3.5 w-3.5" /> screenshot attempt
                             </span>
+                          ) : v.kind === "file" ? (
+                            <span className="flex items-center gap-1.5 text-sky-300">
+                              <LockIcon className="h-3.5 w-3.5" /> fetched file
+                            </span>
                           ) : (
                             <span className="flex items-center gap-1.5">
                               <EyeIcon className="h-3.5 w-3.5 text-slate-500" /> opened
@@ -572,9 +848,15 @@ export function NoteWorkspace({ id }: { id: string }) {
         {role === "viewer" && (
           <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
             <h1 className="text-xl font-semibold text-slate-100">{title}</h1>
-            <div className="noselect mt-4 whitespace-pre-wrap text-[15px] leading-relaxed text-slate-200">
-              {body}
-            </div>
+            {kind === "text" ? (
+              <div className="noselect mt-4 whitespace-pre-wrap text-[15px] leading-relaxed text-slate-200">
+                {body}
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-slate-400">
+                This share is an encrypted file — use the buttons above to open it.
+              </p>
+            )}
             <p className="mt-6 border-t border-slate-800 pt-4 text-xs text-slate-500">
               Decrypted locally in your browser · copy, selection and print are disabled ·
               your identity is stamped on this view
@@ -592,6 +874,42 @@ export function NoteWorkspace({ id }: { id: string }) {
           </button>
         )}
       </div>
+
+      {/* decrypted file preview (under the watermark layer) */}
+      {previewUrl && fileInfo && (
+        <div className="fixed inset-0 z-30 flex flex-col bg-black/85 backdrop-blur-sm">
+          <div className="flex items-center justify-between border-b border-slate-800 bg-[#0a0f14] px-5 py-3">
+            <p className="truncate text-sm font-medium text-slate-200">{fileInfo.name}</p>
+            <div className="flex items-center gap-2">
+              <span className="hidden text-xs text-slate-500 sm:inline">
+                watermarked to {user?.email}
+              </span>
+              <button
+                onClick={closePreview}
+                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-800 hover:text-slate-100"
+              >
+                <XIcon className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+          <div className="noselect flex flex-1 items-start justify-center overflow-auto p-4">
+            {fileInfo.mime.startsWith("image/") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={previewUrl}
+                alt={fileInfo.name}
+                className="max-h-full max-w-full rounded-lg"
+              />
+            ) : (
+              <iframe
+                src={previewUrl}
+                title={fileInfo.name}
+                className="h-full w-full rounded-lg border border-slate-800 bg-white"
+              />
+            )}
+          </div>
+        </div>
+      )}
 
       {toast && (
         <div className="fixed bottom-6 left-1/2 z-[70] flex -translate-x-1/2 items-center gap-3 rounded-xl border border-slate-700 bg-slate-900 px-5 py-3 text-sm text-slate-200 shadow-2xl">
@@ -616,4 +934,10 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
       <div className="mt-2">{children}</div>
     </div>
   );
+}
+
+function fmtSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }

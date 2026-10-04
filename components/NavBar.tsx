@@ -38,6 +38,15 @@ export function NavBar() {
               Log out
             </button>
           </div>
+        ) : status === "locked" ? (
+          <div className="text-sm">
+            <Link
+              href="/login"
+              className="rounded-lg border border-amber-700/60 px-3 py-1.5 font-medium text-amber-300 transition hover:bg-amber-950/40"
+            >
+              Session locked — unlock
+            </Link>
+          </div>
         ) : status !== "loading" ? (
           <div className="flex items-center gap-3 text-sm">
             <Link href="/login" className="px-3 py-1.5 text-slate-300 transition hover:text-white">

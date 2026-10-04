@@ -36,6 +36,7 @@ export function AiPanel({ open, onClose }: { open: boolean; onClose: () => void 
 
   const embRef = useRef<Worker | null>(null);
   const llmRef = useRef<Worker | null>(null);
+  const indexingRef = useRef(false);
 
   const getEmb = useCallback(() => {
     if (!embRef.current) {
@@ -48,7 +49,8 @@ export function AiPanel({ open, onClose }: { open: boolean; onClose: () => void 
 
   /* ---- index the user's own notes (titles only for shared notes) ---- */
   const indexAll = useCallback(async () => {
-    if (!keys) return;
+    if (!keys || indexingRef.current) return;
+    indexingRef.current = true;
     setErrMsg("");
     setPct(0);
     try {
@@ -63,7 +65,12 @@ export function AiPanel({ open, onClose }: { open: boolean; onClose: () => void 
         const ck = await unwrapKey(wrap, keys.privJwk);
         const noteTitle = await decryptString(ck, full.note.titleEnc);
         const noteBody = await decryptString(ck, full.note.bodyEnc);
-        const chunks = chunkText(`${noteTitle}\n\n${noteBody}`);
+        // File notes (PDFs etc.) are indexed by title only — extracting text
+        // from binaries would require parsing them outside the E2E boundary.
+        const chunks =
+          full.note.kind === "file"
+            ? chunkText(noteTitle)
+            : chunkText(`${noteTitle}\n\n${noteBody}`);
         if (chunks.length === 0) {
           await saveNoteChunks(n.id, n.updatedAt, noteTitle, [], []);
           continue;
@@ -80,12 +87,19 @@ export function AiPanel({ open, onClose }: { open: boolean; onClose: () => void 
     } catch (e) {
       setErrMsg(e instanceof Error ? e.message : "Indexing failed");
       setPhase("error");
+    } finally {
+      indexingRef.current = false;
     }
   }, [keys, getEmb]);
 
   useEffect(() => {
     if (open && phase === "idle") indexAll();
   }, [open, phase, indexAll]);
+
+  // reopening the panel clears a past error so indexing can retry
+  useEffect(() => {
+    if (!open && phase === "error") setPhase("idle");
+  }, [open, phase]);
 
   useEffect(() => {
     const onDirty = () => {
@@ -195,9 +209,15 @@ export function AiPanel({ open, onClose }: { open: boolean; onClose: () => void 
 
       <div className="sn-scroll flex-1 overflow-y-auto px-5 py-4">
         {phase === "error" && (
-          <p className="mb-4 rounded-lg border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-300">
+          <div className="mb-4 rounded-lg border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-300">
             {errMsg}
-          </p>
+            <button
+              onClick={indexAll}
+              className="ml-2 font-medium underline hover:no-underline"
+            >
+              Try again
+            </button>
+          </div>
         )}
 
         {busy && (

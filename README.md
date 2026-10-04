@@ -26,6 +26,7 @@ ended up. This is that tool.
 | **Instant revocation** | One click kills a grant — even after the recipient has read the note. |
 | **Per-viewer watermark** | Every view renders the reader's email, view number and timestamp across the page. Leaks carry their name. |
 | **Read audit trail** | Every open (and screenshot-key attempt) is recorded: who, when, IP, device. Owners see it all; owners' own reads are never logged. |
+| **Encrypted file sharing** | Upload PDFs, DOCX, images or any file (≤10 MB). The file is AES-256-GCM encrypted in the browser — including its filename and MIME type — and decrypted only in the reader's browser. PDFs and images render inline, under the watermark. |
 | **Anti-leak deterrence** | Copy/selection/right-click/print disabled, page content hides when the tab loses focus, PrintScreen is intercepted where the browser allows and logged as an event. |
 | **Local AI over your notes** | Semantic search + "chat with your notes" powered by **Gemma 3** (open weight) running **in the browser tab** via transformers.js/WebGPU. Embeddings live in IndexedDB. Nothing is uploaded. |
 
@@ -47,6 +48,10 @@ ended up. This is that tool.
 Threat model: protects note **content** against server compromise, database
 leaks, and unauthorized readers. Does **not** protect against a determined
 reader with a camera — that is what the watermark + audit trail are for.
+Known limitation, stated honestly: for inline PDF previews the browser's own
+PDF viewer is used, and its built-in save/print controls cannot be disabled by
+any website — the per-viewer watermark is stamped above the preview and every
+open/fetch is audit-logged, so leaks remain traceable.
 
 ## Stack
 
