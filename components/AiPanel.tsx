@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "./AuthProvider";
-import { XIcon, SendIcon, CpuIcon } from "./icons";
+import { X, PaperPlaneRight, Cpu } from "@phosphor-icons/react/ssr";
 import { chunkText, buildPrompt } from "@/lib/ai/rag";
 import {
   getNoteVersion,
@@ -65,7 +65,7 @@ export function AiPanel({ open, onClose }: { open: boolean; onClose: () => void 
         const ck = await unwrapKey(wrap, keys.privJwk);
         const noteTitle = await decryptString(ck, full.note.titleEnc);
         const noteBody = await decryptString(ck, full.note.bodyEnc);
-        // File notes (PDFs etc.) are indexed by title only — extracting text
+        // File notes (PDFs etc.) are indexed by title only. Extracting text
         // from binaries would require parsing them outside the E2E boundary.
         const chunks =
           full.note.kind === "file"
@@ -177,18 +177,18 @@ export function AiPanel({ open, onClose }: { open: boolean; onClose: () => void 
       <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
         <div>
           <h2 className="flex items-center gap-2 font-semibold">
-            <CpuIcon className="h-4 w-4 text-emerald-400" />
+            <Cpu size={16} className="text-emerald-400" />
             Ask your notes
           </h2>
           <p className="mt-0.5 text-xs text-slate-500">
-            Gemma 3 runs in this tab — zero cloud, zero leaks
+            Gemma 3 runs in this tab. Zero cloud, zero leaks.
           </p>
         </div>
         <button
           onClick={onClose}
           className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-800 hover:text-slate-200"
         >
-          <XIcon className="h-4 w-4" />
+          <X size={16} />
         </button>
       </div>
 
@@ -298,7 +298,7 @@ export function AiPanel({ open, onClose }: { open: boolean; onClose: () => void 
                 disabled={asking}
                 className="rounded-lg bg-emerald-500 px-4 text-slate-950 transition hover:bg-emerald-400 disabled:opacity-50"
               >
-                <SendIcon className="h-4 w-4" />
+                <PaperPlaneRight size={16} />
               </button>
             </div>
 
@@ -334,7 +334,8 @@ export function AiPanel({ open, onClose }: { open: boolean; onClose: () => void 
       </div>
 
       <div className="border-t border-slate-800 px-5 py-3 text-xs leading-relaxed text-slate-500">
-        Indexes <strong className="text-slate-400">your own notes</strong> only — notes
+        Indexes <strong className="text-slate-400">your own notes</strong> only.
+        Notes
         shared with you aren&apos;t indexed, keeping their view counts honest. Embeddings
         and the model live in this browser; nothing is uploaded.
       </div>

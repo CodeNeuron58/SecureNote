@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import { ShieldIcon } from "@/components/icons";
+import { ShieldCheck } from "@phosphor-icons/react/ssr";
 
 export default function SignupPage() {
   const { signup, status } = useAuth();
@@ -46,7 +46,7 @@ export default function SignupPage() {
     <main className="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-md flex-col justify-center px-4 py-12">
       <div className="mb-8 text-center">
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400">
-          <ShieldIcon className="h-6 w-6" />
+          <ShieldCheck size={24} weight="duotone" className="text-emerald-400" />
         </div>
         <h1 className="text-2xl font-semibold tracking-tight">Create your account</h1>
         <p className="mt-1 text-sm text-slate-400">
@@ -86,7 +86,7 @@ export default function SignupPage() {
           />
           <p className="mt-1.5 text-xs text-slate-500">
             Your password derives the key that protects your private key. If you lose it, your notes
-            cannot be recovered — by anyone.
+            cannot be recovered. By anyone.
           </p>
         </div>
 

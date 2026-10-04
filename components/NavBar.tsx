@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
-import { ShieldIcon } from "./icons";
+import { ShieldCheck } from "@phosphor-icons/react/ssr";
 
 export function NavBar() {
   const { status, user, logout } = useAuth();
@@ -13,7 +13,7 @@ export function NavBar() {
     <header className="sticky top-0 z-50 border-b border-slate-800/60 bg-[#0a0e13]/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-          <ShieldIcon className="h-5 w-5 text-emerald-400" />
+          <ShieldCheck size={20} weight="duotone" className="text-emerald-400" />
           <span>
             Secure<span className="text-emerald-400">Note</span>
           </span>
@@ -44,7 +44,7 @@ export function NavBar() {
               href="/login"
               className="rounded-lg border border-amber-700/60 px-3 py-1.5 font-medium text-amber-300 transition hover:bg-amber-950/40"
             >
-              Session locked — unlock
+              Session locked. Unlock
             </Link>
           </div>
         ) : status !== "loading" ? (

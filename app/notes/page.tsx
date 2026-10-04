@@ -17,7 +17,14 @@ import type { NoteListItem } from "@/lib/types";
 import { AI_ENABLED } from "@/lib/ai/flag";
 import { AiPanel } from "@/components/AiPanel";
 import { deleteNoteChunks } from "@/lib/ai/store";
-import { PlusIcon, TrashIcon, CpuIcon, EyeIcon, LockIcon, FileIcon } from "@/components/icons";
+import {
+  Plus,
+  Trash,
+  Cpu,
+  Eye,
+  LockKey,
+  FileText,
+} from "@phosphor-icons/react/ssr";
 
 type Deco = NoteListItem & { title: string };
 
@@ -99,7 +106,7 @@ export default function NotesPage() {
   async function uploadFile(file: File) {
     if (!keys) return;
     if (file.size > MAX_PLAINTEXT_BYTES) {
-      setError("File too large — the limit is 10 MB");
+      setError("File too large. The limit is 10 MB");
       return;
     }
     setCreating(true);
@@ -186,12 +193,12 @@ export default function NotesPage() {
       <main className="mx-auto flex min-h-[70vh] max-w-md items-center px-4">
         <div className="w-full rounded-2xl border border-slate-800 bg-slate-900/40 p-8 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-400">
-            <LockIcon className="h-6 w-6" />
+            <LockKey size={24} className="text-amber-400" />
           </div>
           <h1 className="text-xl font-semibold">Your keys are locked</h1>
           <p className="mt-2 text-sm text-slate-400">
-            Note keys live only in your browser session. Sign in again to unlock them —
-            your notes are untouched.
+            Note keys live only in your browser session. Sign in again to unlock
+            them: your notes are untouched.
           </p>
           <Link
             href="/login"
@@ -210,7 +217,8 @@ export default function NotesPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">My notes</h1>
           <p className="mt-1 text-sm text-slate-400">
-            Titles here are decrypted locally from ciphertext — the server never saw them.
+            Titles here are decrypted locally from ciphertext. The server never
+            saw them.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -219,7 +227,7 @@ export default function NotesPage() {
               onClick={() => setAiOpen(true)}
               className="flex items-center gap-2 rounded-xl border border-emerald-800/60 bg-emerald-950/30 px-4 py-2.5 text-sm font-medium text-emerald-300 transition hover:bg-emerald-900/40"
             >
-              <CpuIcon className="h-4 w-4" />
+              <Cpu size={16} className="text-emerald-400" />
               Ask your notes
             </button>
           )}
@@ -228,7 +236,7 @@ export default function NotesPage() {
             disabled={creating}
             className="flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:border-slate-500 disabled:opacity-50"
           >
-            <LockIcon className="h-4 w-4" />
+            <LockKey size={16} />
             Upload file
           </button>
           <input
@@ -243,7 +251,7 @@ export default function NotesPage() {
             disabled={creating}
             className="flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:opacity-50"
           >
-            <PlusIcon className="h-4 w-4" />
+            <Plus size={16} weight="bold" />
             {creating ? "Encrypting…" : "New note"}
           </button>
         </div>
@@ -258,11 +266,11 @@ export default function NotesPage() {
       {notes && notes.length === 0 && (
         <div className="rounded-3xl border border-dashed border-slate-800 p-14 text-center">
           <p className="text-slate-400">
-            No notes yet. Create the first one — it never leaves your browser
+            No notes yet. Create the first one: it never leaves your browser
             unencrypted.
           </p>
           <p className="mt-2 font-mono text-xs text-slate-600">
-            text notes · PDFs · docs · images — all encrypted the same way
+            Text notes, PDFs, docs, images. All encrypted the same way.
           </p>
         </div>
       )}
@@ -280,12 +288,12 @@ export default function NotesPage() {
                   <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 font-medium text-emerald-300">Owner</span>
                 ) : (
                   <span className="flex items-center gap-1 rounded-full bg-sky-500/10 px-2.5 py-1 font-medium text-sky-300">
-                    <EyeIcon className="h-3 w-3" /> Shared with you
+                    <Eye size={12} /> Shared with you
                   </span>
                 )}
                 {n.kind === "file" ? (
                   <span className="flex items-center gap-1.5 rounded-full bg-violet-500/10 px-2.5 py-1 font-medium text-violet-300">
-                    <FileIcon className="h-3 w-3" />
+                    <FileText size={12} />
                     {n.file ? fmtSize(n.file.size) : "File"}
                   </span>
                 ) : (
@@ -315,7 +323,7 @@ export default function NotesPage() {
                 title="Delete note"
                 className="absolute right-4 top-4 rounded-lg p-2 text-slate-600 opacity-0 transition hover:bg-red-950/60 hover:text-red-400 group-hover:opacity-100"
               >
-                <TrashIcon className="h-4 w-4" />
+                <Trash size={16} />
               </button>
             )}
           </div>

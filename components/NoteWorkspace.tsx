@@ -24,13 +24,13 @@ import type { GrantItem, NoteFull, ViewEvent } from "@/lib/types";
 import { deleteNoteChunks } from "@/lib/ai/store";
 import { Watermark } from "@/components/Watermark";
 import {
-  EyeIcon,
-  CameraOffIcon,
-  TrashIcon,
-  XIcon,
-  LockIcon,
-  FileIcon,
-} from "@/components/icons";
+  Eye,
+  CameraSlash,
+  Trash,
+  X,
+  LockKey,
+  FileText,
+} from "@phosphor-icons/react/ssr";
 
 const MAX_PLAINTEXT_BYTES = 10 * 1024 * 1024; // 10 MB
 
@@ -325,7 +325,7 @@ export function NoteWorkspace({ id }: { id: string }) {
     try {
       await api(`/api/notes/${id}/share?grantId=${grantId}`, { method: "DELETE" });
       await loadGrants();
-      showToast("Access revoked — their key no longer opens this note");
+      showToast("Access revoked: their key no longer opens this note");
     } catch (e) {
       showToast(e instanceof Error ? e.message : "Could not revoke");
     }
@@ -336,7 +336,7 @@ export function NoteWorkspace({ id }: { id: string }) {
     const ck = keyRef.current;
     if (!ck || role !== "owner") return;
     if (f.size > MAX_PLAINTEXT_BYTES) {
-      showToast("File too large — the limit is 10 MB");
+      showToast("File too large. The limit is 10 MB");
       return;
     }
     setUploading(true);
@@ -383,7 +383,7 @@ export function NoteWorkspace({ id }: { id: string }) {
         type: fileInfo.mime || "application/octet-stream",
       });
       const url = URL.createObjectURL(blob);
-      // Only images and PDFs render inline — anything else (including HTML,
+      // Only images and PDFs render inline. Anything else (including HTML,
       // which could run scripts) is forced to the download path.
       const previewable =
         fileInfo.mime === "application/pdf" ||
@@ -440,8 +440,8 @@ export function NoteWorkspace({ id }: { id: string }) {
       <Main>
         <Card title="Sign in to open this note">
           <p className="text-sm text-slate-400">
-            This note is end-to-end encrypted and shared with a specific account —
-            sign in with the account it was shared to.
+            This note is end-to-end encrypted and shared with a specific
+            account. Sign in with the account it was shared to.
           </p>
           <Link
             href={`/login?next=/notes/${id}`}
@@ -544,10 +544,10 @@ export function NoteWorkspace({ id }: { id: string }) {
           onClick={() => setHidden(false)}
           className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0a0e13]/95 backdrop-blur-xl"
         >
-          <EyeIcon className="mb-4 h-8 w-8 text-slate-500" />
+          <Eye size={32} className="mb-4 text-slate-500" />
           <p className="text-lg font-medium text-slate-300">Content hidden</p>
           <p className="mt-1 text-sm text-slate-500">
-            The page was left or unfocused — click to resume reading.
+            The page was left or unfocused. Click to resume reading.
           </p>
         </button>
       )}
@@ -556,7 +556,7 @@ export function NoteWorkspace({ id }: { id: string }) {
         <Link
           href="/notes"
           onClick={(e) => {
-            if (dirty && !confirm("You have unsaved changes — leave anyway?")) {
+            if (dirty && !confirm("You have unsaved changes. Leave anyway?")) {
               e.preventDefault();
             }
           }}
@@ -568,7 +568,7 @@ export function NoteWorkspace({ id }: { id: string }) {
         {role === "viewer" && (
           <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-amber-900/50 bg-amber-950/20 px-4 py-3 text-sm text-amber-200/90">
             <span className="flex items-center gap-2">
-              <CameraOffIcon className="h-4 w-4" />
+              <CameraSlash size={16} />
               This view is watermarked to <strong>{user?.email}</strong> and logged.
             </span>
             {meta?.viewNumber != null && (
@@ -624,7 +624,7 @@ export function NoteWorkspace({ id }: { id: string }) {
             <div className="mt-4 flex items-center justify-between border-t border-slate-800 pt-4">
               <p className="text-xs text-slate-500">
                 {dirty
-                  ? "Unsaved changes — click Save to encrypt them"
+                  ? "Unsaved changes: click Save to encrypt them"
                   : savedAt
                     ? `Encrypted and saved at ${savedAt.toLocaleTimeString()}`
                     : "Encrypted locally with AES-256-GCM before upload"}
@@ -645,7 +645,7 @@ export function NoteWorkspace({ id }: { id: string }) {
             <div className="flex items-start justify-between gap-4">
               <div className="flex min-w-0 items-start gap-3">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/10 text-violet-400">
-                  <FileIcon className="h-5 w-5" />
+                  <FileText size={20} />
                 </div>
                 <div className="min-w-0">
                   <p className="truncate font-medium text-slate-100">
@@ -653,7 +653,7 @@ export function NoteWorkspace({ id }: { id: string }) {
                   </p>
                   <p className="mt-0.5 text-xs text-slate-500">
                     {fileInfo
-                      ? `${fmtSize(fileInfo.size)} · AES-256-GCM · decrypted only in this browser`
+                      ? `${fmtSize(fileInfo.size)}, AES-256-GCM. Decrypted only in this browser.`
                       : ""}
                   </p>
                 </div>
@@ -694,7 +694,7 @@ export function NoteWorkspace({ id }: { id: string }) {
             </div>
             <p className="mt-4 text-xs text-slate-500">
               {role === "viewer"
-                ? "Decrypts in your browser — the server only ever handles sealed ciphertext. Opening it is recorded in the owner's audit log."
+                ? "Decrypts in your browser: the server only ever handles sealed ciphertext. Opening it is recorded in the owner's audit log."
                 : "Uploaded as ciphertext; even the database cannot read it. Replacing it keeps all existing shares working."}
             </p>
           </div>
@@ -708,7 +708,8 @@ export function NoteWorkspace({ id }: { id: string }) {
             >
               <h3 className="font-semibold">Share with a person</h3>
               <p className="mt-1 text-sm text-slate-400">
-                The note key is wrapped for their public key in your browser — the server
+                The note key is wrapped for their public key in your browser, so
+                the server
                 only ever handles it sealed.
               </p>
               <div className="mt-4 space-y-3">
@@ -817,7 +818,7 @@ export function NoteWorkspace({ id }: { id: string }) {
             </p>
             {views.length === 0 ? (
               <p className="mt-4 text-sm text-slate-500">
-                No recorded activity yet. Share the note — every open by a viewer
+                No recorded activity yet. Share the note: every open by a viewer
                 will appear here, with time, IP and device.
               </p>
             ) : (
@@ -843,19 +844,19 @@ export function NoteWorkspace({ id }: { id: string }) {
                         <td className="py-2.5 pr-4">
                           {v.kind === "screenshot" ? (
                             <span className="flex items-center gap-1.5 text-amber-300">
-                              <CameraOffIcon className="h-3.5 w-3.5" /> screenshot attempt
+                              <CameraSlash size={14} /> screenshot attempt
                             </span>
                           ) : v.kind === "file" ? (
                             <span className="flex items-center gap-1.5 text-sky-300">
-                              <LockIcon className="h-3.5 w-3.5" /> fetched file
+                              <LockKey size={14} /> fetched file
                             </span>
                           ) : (
                             <span className="flex items-center gap-1.5">
-                              <EyeIcon className="h-3.5 w-3.5 text-slate-500" /> opened
+                              <Eye size={14} className="text-slate-500" /> opened
                             </span>
                           )}
                         </td>
-                        <td className="py-2.5 pr-4">{v.n ?? "—"}</td>
+                        <td className="py-2.5 pr-4 font-mono text-slate-600">{v.n ?? "n/a"}</td>
                         <td className="py-2.5 pr-4 font-mono text-xs">{v.ip}</td>
                         <td className="max-w-[220px] truncate py-2.5 text-xs text-slate-500">
                           {v.ua}
@@ -879,7 +880,7 @@ export function NoteWorkspace({ id }: { id: string }) {
               </div>
             ) : (
               <p className="mt-3 text-sm text-slate-400">
-                This share is an encrypted file — use the buttons above to open it.
+                This share is an encrypted file. Use the buttons above to open it.
               </p>
             )}
             <p className="mt-6 border-t border-slate-800 pt-4 text-xs text-slate-500">
@@ -895,7 +896,7 @@ export function NoteWorkspace({ id }: { id: string }) {
             onClick={del}
             className="mt-6 flex items-center gap-2 text-sm text-slate-500 transition hover:text-red-400"
           >
-            <TrashIcon className="h-4 w-4" /> Delete this note
+            <Trash size={16} /> Delete this note
           </button>
         )}
       </div>
@@ -913,7 +914,7 @@ export function NoteWorkspace({ id }: { id: string }) {
                 onClick={closePreview}
                 className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-800 hover:text-slate-100"
               >
-                <XIcon className="h-4 w-4" />
+                <X size={16} />
               </button>
             </div>
           </div>
@@ -940,7 +941,7 @@ export function NoteWorkspace({ id }: { id: string }) {
         <div className="fixed bottom-6 left-1/2 z-[70] flex -translate-x-1/2 items-center gap-3 rounded-xl border border-slate-700 bg-slate-900 px-5 py-3 text-sm text-slate-200 shadow-2xl">
           {toast}
           <button onClick={() => setToast("")} className="text-slate-500 hover:text-slate-300">
-            <XIcon className="h-3.5 w-3.5" />
+            <X size={14} />
           </button>
         </div>
       )}

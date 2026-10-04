@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import { LockIcon } from "@/components/icons";
+import { LockKey } from "@phosphor-icons/react/ssr";
 
 export default function LoginPage() {
   const { login, status } = useAuth();
@@ -41,11 +41,11 @@ export default function LoginPage() {
     <main className="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-md flex-col justify-center px-4 py-12">
       <div className="mb-8 text-center">
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400">
-          <LockIcon className="h-6 w-6" />
+          <LockKey size={24} className="text-emerald-400" />
         </div>
         <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
         <p className="mt-1 text-sm text-slate-400">
-          Your keys are derived from your password — we never see it.
+          Your keys are derived from your password. We never see it.
         </p>
       </div>
 

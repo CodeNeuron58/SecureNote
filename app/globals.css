@@ -95,6 +95,24 @@ body::after {
   -webkit-touch-callout: none;
 }
 
+/* mandatory: all motion collapses to static when the user prefers less */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .sn-rise,
+  .sn-skeleton {
+    animation: none !important;
+  }
+  a,
+  button,
+  input,
+  select,
+  textarea {
+    transition: none;
+  }
+}
+
 @media print {
   body {
     display: none !important;
