@@ -2,21 +2,90 @@
 
 :root {
   color-scheme: dark;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 html,
 body {
-  background: #0a0f14;
+  background: #0a0e13;
   color: #e6edf3;
 }
 
 body {
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 ::selection {
   background: rgba(52, 211, 153, 0.25);
+}
+
+/* every interactive element moves with the same premium easing */
+a,
+button,
+input,
+select,
+textarea {
+  transition: all 0.25s var(--ease-out-expo);
+}
+
+/* tactile feedback: a physical push on press */
+button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.99);
+}
+
+/* film grain — fixed, pointer-events-none, never repaints scrolling content */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0.028;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* staggered load-in cascade */
+@keyframes sn-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.sn-rise {
+  animation: sn-fade-up 0.7s var(--ease-out-expo) both;
+  animation-delay: calc(var(--i, 0) * 90ms);
+}
+
+/* skeletal loaders matching layout shapes */
+@keyframes sn-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+.sn-skeleton {
+  border-radius: 0.75rem;
+  background: linear-gradient(
+    100deg,
+    rgba(30, 41, 59, 0.55) 40%,
+    rgba(51, 65, 85, 0.8) 50%,
+    rgba(30, 41, 59, 0.55) 60%
+  );
+  background-size: 200% 100%;
+  animation: sn-shimmer 1.6s linear infinite;
 }
 
 /* applied to shared-note viewports: content must not be selectable or printable */

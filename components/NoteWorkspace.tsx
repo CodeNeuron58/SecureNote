@@ -29,6 +29,7 @@ import {
   TrashIcon,
   XIcon,
   LockIcon,
+  FileIcon,
 } from "@/components/icons";
 
 const MAX_PLAINTEXT_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -474,8 +475,20 @@ export function NoteWorkspace({ id }: { id: string }) {
   if (phase === "loading") {
     return (
       <Main>
-        <div className="flex justify-center py-24">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-emerald-400" />
+        <div className="mx-auto max-w-3xl">
+          <div className="sn-skeleton mb-6 h-4 w-24" />
+          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-6">
+            <div className="sn-skeleton h-6 w-2/3" />
+            <div className="mt-6 space-y-3">
+              <div className="sn-skeleton h-3 w-full" />
+              <div className="sn-skeleton h-3 w-11/12" />
+              <div className="sn-skeleton h-3 w-4/5" />
+              <div className="sn-skeleton h-3 w-3/5" />
+            </div>
+            <div className="mt-8 flex justify-end">
+              <div className="sn-skeleton h-10 w-24" />
+            </div>
+          </div>
         </div>
       </Main>
     );
@@ -529,7 +542,7 @@ export function NoteWorkspace({ id }: { id: string }) {
       {role === "viewer" && hidden && (
         <button
           onClick={() => setHidden(false)}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0a0f14]/95 backdrop-blur-xl"
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0a0e13]/95 backdrop-blur-xl"
         >
           <EyeIcon className="mb-4 h-8 w-8 text-slate-500" />
           <p className="text-lg font-medium text-slate-300">Content hidden</p>
@@ -631,8 +644,8 @@ export function NoteWorkspace({ id }: { id: string }) {
           <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
             <div className="flex items-start justify-between gap-4">
               <div className="flex min-w-0 items-start gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400">
-                  <LockIcon className="h-5 w-5" />
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/10 text-violet-400">
+                  <FileIcon className="h-5 w-5" />
                 </div>
                 <div className="min-w-0">
                   <p className="truncate font-medium text-slate-100">
@@ -890,7 +903,7 @@ export function NoteWorkspace({ id }: { id: string }) {
       {/* decrypted file preview (under the watermark layer) */}
       {previewUrl && fileInfo && (
         <div className="fixed inset-0 z-30 flex flex-col bg-black/85 backdrop-blur-sm">
-          <div className="flex items-center justify-between border-b border-slate-800 bg-[#0a0f14] px-5 py-3">
+          <div className="flex items-center justify-between border-b border-slate-800 bg-[#0a0e13] px-5 py-3">
             <p className="truncate text-sm font-medium text-slate-200">{fileInfo.name}</p>
             <div className="flex items-center gap-2">
               <span className="hidden text-xs text-slate-500 sm:inline">

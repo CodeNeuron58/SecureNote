@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
 import { NavBar } from "@/components/NavBar";
@@ -23,7 +25,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0f14",
+  themeColor: "#0a0e13",
 };
 
 export default function RootLayout({
@@ -33,7 +35,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased min-h-screen">
+      <body
+        className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}
+      >
         <AuthProvider>
           <NavBar />
           {children}

@@ -17,7 +17,7 @@ import type { NoteListItem } from "@/lib/types";
 import { AI_ENABLED } from "@/lib/ai/flag";
 import { AiPanel } from "@/components/AiPanel";
 import { deleteNoteChunks } from "@/lib/ai/store";
-import { PlusIcon, TrashIcon, CpuIcon, EyeIcon, LockIcon } from "@/components/icons";
+import { PlusIcon, TrashIcon, CpuIcon, EyeIcon, LockIcon, FileIcon } from "@/components/icons";
 
 type Deco = NoteListItem & { title: string };
 
@@ -164,8 +164,19 @@ export default function NotesPage() {
 
   if (status === "loading" || (status === "ready" && !notes && !error)) {
     return (
-      <main className="flex min-h-[70vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-emerald-400" />
+      <main className="mx-auto max-w-6xl px-4 py-10">
+        <div className="mb-8 flex items-center justify-between">
+          <div className="space-y-3">
+            <div className="sn-skeleton h-7 w-40" />
+            <div className="sn-skeleton h-4 w-72" />
+          </div>
+          <div className="sn-skeleton h-11 w-52" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="sn-skeleton h-32" />
+          ))}
+        </div>
       </main>
     );
   }
@@ -245,16 +256,23 @@ export default function NotesPage() {
       )}
 
       {notes && notes.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-slate-800 p-12 text-center">
-          <p className="text-slate-400">No notes yet. Create the first one — it never leaves your browser unencrypted.</p>
+        <div className="rounded-3xl border border-dashed border-slate-800 p-14 text-center">
+          <p className="text-slate-400">
+            No notes yet. Create the first one — it never leaves your browser
+            unencrypted.
+          </p>
+          <p className="mt-2 font-mono text-xs text-slate-600">
+            text notes · PDFs · docs · images — all encrypted the same way
+          </p>
         </div>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {(notes ?? []).map((n) => (
+        {(notes ?? []).map((n, idx) => (
           <div
             key={n.id}
-            className="group relative rounded-2xl border border-slate-800 bg-slate-900/40 p-5 transition hover:border-slate-600"
+            className="sn-rise group relative rounded-2xl border border-slate-800/80 bg-slate-900/40 p-5 hover:-translate-y-0.5 hover:border-slate-600 hover:shadow-[0_16px_32px_-16px_rgba(0,0,0,0.6)]"
+            style={{ ["--i" as string]: Math.min(idx, 8) }}
           >
             <Link href={`/notes/${n.id}`} className="block">
               <div className="mb-3 flex items-center gap-2 text-xs">
@@ -266,8 +284,9 @@ export default function NotesPage() {
                   </span>
                 )}
                 {n.kind === "file" ? (
-                  <span className="rounded-full bg-violet-500/10 px-2.5 py-1 font-medium text-violet-300">
-                    File{n.file ? ` · ${fmtSize(n.file.size)}` : ""}
+                  <span className="flex items-center gap-1.5 rounded-full bg-violet-500/10 px-2.5 py-1 font-medium text-violet-300">
+                    <FileIcon className="h-3 w-3" />
+                    {n.file ? fmtSize(n.file.size) : "File"}
                   </span>
                 ) : (
                   <span className="rounded-full bg-slate-800 px-2.5 py-1 text-slate-300">

@@ -170,7 +170,7 @@ export function AiPanel({ open, onClose }: { open: boolean; onClose: () => void 
 
   return (
     <div
-      className={`fixed inset-y-0 right-0 z-[60] flex w-full max-w-md flex-col border-l border-slate-800 bg-[#0a0f14] shadow-2xl transition-transform duration-300 ${
+      className={`fixed inset-y-0 right-0 z-[60] flex w-full max-w-md flex-col border-l border-slate-800 bg-[#0a0e13] shadow-2xl transition-transform duration-300 ${
         open ? "translate-x-0" : "translate-x-full"
       }`}
     >

@@ -10,7 +10,7 @@ export function NavBar() {
   const router = useRouter();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-800/80 bg-[#0a0f14]/85 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-slate-800/60 bg-[#0a0e13]/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
           <ShieldIcon className="h-5 w-5 text-emerald-400" />

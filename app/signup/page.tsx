@@ -54,7 +54,7 @@ export default function SignupPage() {
         </p>
       </div>
 
-      <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
+      <form onSubmit={onSubmit} className="space-y-4 rounded-3xl border border-slate-800/80 bg-slate-900/40 p-7 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
         <div>
           <label className="mb-1.5 block text-sm text-slate-300" htmlFor="name">Name</label>
           <input
