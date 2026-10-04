@@ -1,0 +1,8 @@
+<svg width="1200" height="300" viewBox="0 0 1200 300" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SecureNote">
+  <rect width="1200" height="300" rx="24" fill="#0a0e13"/>
+  <circle cx="600" cy="128" r="86" fill="none" stroke="#10b981" stroke-opacity="0.25" stroke-width="2"/>
+  <circle cx="600" cy="128" r="64" fill="none" stroke="#10b981" stroke-opacity="0.45" stroke-width="2"/>
+  <path d="M600 84 L638 98 V128 C638 152 620 166 600 174 C580 166 562 152 562 128 V98 Z" fill="none" stroke="#34d399" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M585 128 L596 139 L617 116" fill="none" stroke="#34d399" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="600" y="252" text-anchor="middle" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="56" font-weight="700" fill="#e6edf3" letter-spacing="-1">Secure<tspan fill="#34d399">Note</tspan></text>
+</svg>
