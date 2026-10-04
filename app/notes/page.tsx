@@ -16,6 +16,7 @@ import {
 import type { NoteListItem } from "@/lib/types";
 import { AI_ENABLED } from "@/lib/ai/flag";
 import { AiPanel } from "@/components/AiPanel";
+import { deleteNoteChunks } from "@/lib/ai/store";
 import { PlusIcon, TrashIcon, CpuIcon, EyeIcon, LockIcon } from "@/components/icons";
 
 type Deco = NoteListItem & { title: string };
@@ -26,6 +27,16 @@ function fmtSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function expiresLabel(iso: string): string {
+  const ms = new Date(iso).getTime() - Date.now();
+  if (ms <= 0) return "expired";
+  const mins = ms / 60_000;
+  if (mins < 60) return `expires in ${Math.max(1, Math.round(mins))}m`;
+  const hrs = mins / 60;
+  if (hrs < 48) return `expires in ${Math.round(hrs)}h`;
+  return `expires in ${Math.round(hrs / 24)}d`;
 }
 
 export default function NotesPage() {
@@ -144,6 +155,7 @@ export default function NotesPage() {
     if (!confirm(`Delete "${title}" and all of its shares, permanently?`)) return;
     try {
       await api(`/api/notes/${id}`, { method: "DELETE" });
+      deleteNoteChunks(id).catch(() => {});
       setNotes((ns) => (ns ? ns.filter((n) => n.id !== id) : ns));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not delete note");
@@ -269,7 +281,7 @@ export default function NotesPage() {
                 )}
                 {n.role === "viewer" && n.grant?.expiresAt && (
                   <span className="rounded-full bg-slate-800 px-2.5 py-1 text-slate-300">
-                    expires {new Date(n.grant.expiresAt).toLocaleDateString()}
+                    {expiresLabel(n.grant.expiresAt)}
                   </span>
                 )}
               </div>

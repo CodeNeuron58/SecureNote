@@ -45,9 +45,12 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
       { status: 403 }
     );
   }
+  // Strictly exceeded, not equal: views === maxViews means the viewer is
+  // legitimately inside view #N right now — refocusing the tab must not
+  // kill their in-progress read. New opens are gated by the metered GET.
   if (
     grant.maxViews != null &&
-    Number(grant.views || 0) >= Number(grant.maxViews)
+    Number(grant.views || 0) > Number(grant.maxViews)
   ) {
     return NextResponse.json(
       { error: "This note's view limit has been reached", reason: "limit" },

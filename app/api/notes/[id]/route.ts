@@ -162,5 +162,6 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
   }
   await db.collection("grants").deleteMany({ noteId: oid });
   await db.collection("views").deleteMany({ noteId: oid });
+  await db.collection("blobs").deleteMany({ noteId: oid });
   return NextResponse.json({ ok: true });
 }

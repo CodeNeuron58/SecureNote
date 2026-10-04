@@ -21,6 +21,7 @@ import {
   wrapKeyFor,
 } from "@/lib/crypto";
 import type { GrantItem, NoteFull, ViewEvent } from "@/lib/types";
+import { deleteNoteChunks } from "@/lib/ai/store";
 import { Watermark } from "@/components/Watermark";
 import {
   EyeIcon,
@@ -381,7 +382,12 @@ export function NoteWorkspace({ id }: { id: string }) {
         type: fileInfo.mime || "application/octet-stream",
       });
       const url = URL.createObjectURL(blob);
-      if (download || !fileInfo.mime) {
+      // Only images and PDFs render inline — anything else (including HTML,
+      // which could run scripts) is forced to the download path.
+      const previewable =
+        fileInfo.mime === "application/pdf" ||
+        fileInfo.mime.startsWith("image/");
+      if (download || !previewable) {
         const a = document.createElement("a");
         a.href = url;
         a.download = fileInfo.name;
@@ -421,6 +427,7 @@ export function NoteWorkspace({ id }: { id: string }) {
     if (!confirm("Delete this note and all of its shares, permanently?")) return;
     try {
       await api(`/api/notes/${id}`, { method: "DELETE" });
+      deleteNoteChunks(id).catch(() => {});
       router.push("/notes");
     } catch (e) {
       showToast(e instanceof Error ? e.message : "Could not delete");
@@ -555,7 +562,9 @@ export function NoteWorkspace({ id }: { id: string }) {
               <span className="text-amber-200/60">View #{meta.viewNumber}</span>
             )}
             {meta?.viewsLeft != null && (
-              <span className="text-amber-200/60">{meta.viewsLeft} view(s) left</span>
+              <span className="text-amber-200/60">
+                {meta.viewsLeft} {meta.viewsLeft === 1 ? "view" : "views"} left
+              </span>
             )}
           </div>
         )}
@@ -763,7 +772,7 @@ export function NoteWorkspace({ id }: { id: string }) {
                         {g.views} view{g.views === 1 ? "" : "s"}
                         {g.maxViews != null ? ` of ${g.maxViews}` : ""}
                         {g.expiresAt
-                          ? ` · expires ${new Date(g.expiresAt).toLocaleString()}`
+                          ? ` · ${expiresLabel(g.expiresAt)}`
                           : " · no expiry"}
                       </p>
                     </div>
@@ -794,7 +803,10 @@ export function NoteWorkspace({ id }: { id: string }) {
               never logged.
             </p>
             {views.length === 0 ? (
-              <p className="mt-4 text-sm text-slate-500">No recorded activity yet.</p>
+              <p className="mt-4 text-sm text-slate-500">
+                No recorded activity yet. Share the note — every open by a viewer
+                will appear here, with time, IP and device.
+              </p>
             ) : (
               <div className="sn-scroll mt-4 overflow-x-auto">
                 <table className="w-full text-left text-sm">
@@ -940,4 +952,14 @@ function fmtSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function expiresLabel(iso: string): string {
+  const ms = new Date(iso).getTime() - Date.now();
+  if (ms <= 0) return "expired";
+  const mins = ms / 60_000;
+  if (mins < 60) return `expires in ${Math.max(1, Math.round(mins))}m`;
+  const hrs = mins / 60;
+  if (hrs < 48) return `expires in ${Math.round(hrs)}h`;
+  return `expires in ${Math.round(hrs / 24)}d`;
 }

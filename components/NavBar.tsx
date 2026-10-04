@@ -35,7 +35,7 @@ export function NavBar() {
               }}
               className="rounded-lg border border-slate-700 px-3 py-1.5 text-slate-300 transition hover:border-slate-500 hover:text-white"
             >
-              Log out
+              Sign out
             </button>
           </div>
         ) : status === "locked" ? (

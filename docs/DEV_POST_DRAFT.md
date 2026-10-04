@@ -2,7 +2,8 @@
 
 > Use the official submission template on the challenge page as the base — it
 > auto-adds the tags. The tags must be: #devchallenge #weekendchallenge #hf26challenge
-> Fill in [DEPLOYED_URL] and [VIDEO_URL] before publishing.
+> **Before publishing:** fill in [DEPLOYED_URL] and [VIDEO_URL], add a cover
+> image, and embed the screenshots listed in the Screenshots section below.
 
 ---
 
@@ -10,18 +11,17 @@
 
 ## What I built and who it's for
 
-**SecureNote** is end-to-end encrypted note sharing, and I built it for one
-specific person: my friend, who has spent weeks explaining — at increasing
-volume — that he needs to hand his notes to *exactly* the people he chooses,
-and nobody else, without losing control of where they end up.
+My friend had one requirement that sounds reasonable and is actually
+impossible: *"I want to share my notes with exactly the people I choose — and
+I want no screenshots."* Two of those promises are keepable. One isn't.
+**SecureNote** is what I built instead of lying to him — end-to-end encrypted
+note and file sharing where every read is watermarked, logged, and revocable.
 
-He didn't want "a notes app." He wanted three promises:
+And he wanted three guarantees:
 
 1. Only people he personally grants access can ever open a note.
 2. He knows every single time someone reads one — who, when, from where.
 3. If trust ends, access ends, instantly.
-
-And one wish he stated like a fact: *"and no screenshots."*
 
 His notes, by the way, aren't text — they're PDFs, scanned documents, photos
 of lecture boards. So SecureNote treats **files as first-class citizens**: you
@@ -113,11 +113,27 @@ counts to power a search index felt like breaking promise #2 for convenience.
   privacy requirement, but *because* of it. The closed option wasn't merely
   more expensive; it was architecturally wrong for the problem.
 
+## Screenshots
+
+<!-- Before publishing: take these 3 screenshots and embed them here (DEV image upload):
+     1. The shared-note viewer: watermarked page with the viewer's identity visible
+     2. The owner's audit log showing an "opened" row and an amber "screenshot attempt" row
+     3. The AI panel answering a question with its source chips visible -->
+
 ## Try it
 
-Deployed instance: [DEPLOYED_URL] — sign up with two email addresses, write a
-note as account A, share it to account B with a view limit, open it as B, then
-watch A's audit log. Then press PrintScreen as B and watch it show up there.
+Deployed instance: [DEPLOYED_URL]
+
+Don't want to sign up twice? Two demo accounts are live on the instance:
+
+- **Owner:** [DEMO_OWNER_EMAIL] / password [DEMO_OWNER_PASSWORD]
+- **Viewer:** [DEMO_VIEWER_EMAIL] / password [DEMO_VIEWER_PASSWORD]
+
+A shared note is already sitting in the viewer's inbox: sign in as the viewer
+and open it — your session's email is stamped across the page as a watermark.
+Then sign in as the owner and check the audit log: every open, every file
+fetch, even the viewer's PrintScreen presses, all on the record with IP and
+device. Press PrintScreen as the viewer yourself and watch it land there.
 
 ## Prize categories I'm entering
 

@@ -1,5 +1,7 @@
 # SecureNote
 
+![License](https://img.shields.io/badge/license-MIT-green) ![Next.js](https://img.shields.io/badge/Next.js-15-black) ![AI](https://img.shields.io/badge/AI-Gemma_3_in_browser-emerald) ![Hosted on Render](https://img.shields.io/badge/hosted_on-Render-46E3B7) ![DB](https://img.shields.io/badge/db-MongoDB_Atlas-47A248)
+
 **Share notes like secrets.** End-to-end encrypted note sharing with per-viewer
 watermarks, a full read-audit trail, and AI that runs entirely in your browser.
 
@@ -86,8 +88,11 @@ See [DEPLOY.md](DEPLOY.md) — Atlas (free M0) + Render free web service,
 | `POST /api/notes` | create note (ciphertext + selfWrap) |
 | `GET /api/notes/:id` | fetch + decrypt material; logs viewer opens, enforces limits |
 | `PUT /api/notes/:id` | owner update (re-encrypted ciphertext) |
-| `POST /api/notes/:id/share` | add/replace grant with wrapped key |
-| `DELETE /api/notes/:id/share?viewerId=` | revoke |
+| `POST /api/notes/:id/share` | add/replace grant with wrapped key (preserves view counters) |
+| `DELETE /api/notes/:id/share?grantId=` | revoke |
+| `PUT /api/notes/:id/file` | upload/replace the encrypted file (raw ciphertext body) |
+| `GET /api/notes/:id/file` | fetch encrypted file (audit-logged for viewers) |
+| `GET /api/notes/:id/access` | viewer re-checks grant on focus, without metering |
 | `GET /api/notes/:id/views` | owner-only audit log |
 | `POST /api/notes/:id/event` | viewer-side deterrent events (screenshot key) |
 | `GET /api/health` | liveness + db status |

@@ -48,7 +48,10 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
   );
   await db
     .collection("notes")
-    .updateOne({ _id: note._id }, { $set: { updatedAt: new Date() } });
+    .updateOne(
+      { _id: note._id },
+      { $set: { updatedAt: new Date(), "file.size": buf.length } }
+    );
 
   return NextResponse.json({ ok: true, size: buf.length });
 }

@@ -20,7 +20,10 @@ export async function GET(req: NextRequest) {
   );
   if (!u) {
     return NextResponse.json(
-      { error: "No SecureNote account exists for that email yet" },
+      {
+        error:
+          "No SecureNote account with that email yet — ask them to sign up first, then share again",
+      },
       { status: 404 }
     );
   }

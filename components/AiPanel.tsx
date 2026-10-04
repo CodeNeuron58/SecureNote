@@ -113,6 +113,7 @@ export function AiPanel({ open, onClose }: { open: boolean; onClose: () => void 
   async function doSearch(q: string) {
     if (!q.trim()) return;
     setSearching(true);
+    setErrMsg("");
     setResults(null);
     try {
       const qv = (await embedTexts(getEmb(), [q.trim()]))[0];
@@ -208,15 +209,17 @@ export function AiPanel({ open, onClose }: { open: boolean; onClose: () => void 
       </div>
 
       <div className="sn-scroll flex-1 overflow-y-auto px-5 py-4">
-        {phase === "error" && (
+        {(errMsg && !busy) && (
           <div className="mb-4 rounded-lg border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-300">
             {errMsg}
-            <button
-              onClick={indexAll}
-              className="ml-2 font-medium underline hover:no-underline"
-            >
-              Try again
-            </button>
+            {phase === "error" && (
+              <button
+                onClick={indexAll}
+                className="ml-2 font-medium underline hover:no-underline"
+              >
+                Try again
+              </button>
+            )}
           </div>
         )}
 
@@ -252,7 +255,7 @@ export function AiPanel({ open, onClose }: { open: boolean; onClose: () => void 
                 disabled={searching}
                 className="rounded-lg bg-emerald-500 px-4 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:opacity-50"
               >
-                {searching ? "…" : "Go"}
+                {searching ? "Searching…" : "Go"}
               </button>
             </div>
 
